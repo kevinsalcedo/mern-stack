@@ -2,6 +2,8 @@ const express = require("express");
 const router = express.Router();
 const gravatar = require("gravatar");
 const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
+const config = require("config");
 const { check, validationResult } = require("express-validator/check");
 
 // Import User Model
@@ -61,8 +63,24 @@ router.post(
       // Don't forget anything that returns a promise should have await instead of .then() chain
       await user.save();
 
-      // Return jsonwebtoken
-      res.send("User registered");
+      // Saving a user returns the id within the database (user.id)
+      const payload = {
+        user: {
+          id: user.id
+        }
+      };
+
+      // Sign the token, pass in the payload, secret
+      // If error throw error, else send back to client
+      jwt.sign(
+        payload,
+        config.get("jwtSecret"),
+        { expiresIn: 360000 },
+        (err, token) => {
+          if (err) throw err;
+          res.json({ token });
+        }
+      );
     } catch (err) {
       console.log(err);
       res.status(500).send("Server error");
